@@ -44,7 +44,7 @@
   * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __EEPROM_H
@@ -53,7 +53,8 @@
 /* Includes ------------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Define of the return value */
-typedef enum {
+typedef enum
+{
   EE_OK = 0,
   EE_ERROR,
   EE_NO_VALID_PAGE,
@@ -64,24 +65,27 @@ typedef enum {
   EE_NO_DATA,
   EE_INVALID_VIRTUALADRESS,
   EE_TRANSFER_ERROR,
- 
+
   /* Internal return code */
   EE_PAGE_NOTERASED,
   EE_PAGE_ERASED,
   EE_PAGE_FULL,
 } EE_Status;
 
-#define EE_DATA_STORED_TYPE		 uint32_t
-#define EE_VIRTUALADDRESS_TYPE	 uint16_t
+#define EE_DATA_STORED_TYPE uint32_t
+#define EE_VIRTUALADDRESS_TYPE uint16_t
 /* Variables' number */
-#define NB_OF_VAR             ((uint8_t)0x03)
+#define NB_OF_VAR ((uint8_t)0x03)
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
 EE_Status EE_Init(void);
-EE_Status EE_ReadVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE* Data);
+EE_Status EE_ReadVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE *Data);
 EE_Status EE_WriteVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE Data);
+
+extern uint16_t usEE_Read(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint16_t usLen);
+extern uint16_t usEE_Write(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint16_t usLen);
 
 #endif /* __EEPROM_H */
 

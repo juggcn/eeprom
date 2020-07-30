@@ -43,11 +43,11 @@
   * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /** @addtogroup EEPROM_Emulation
   * @{
-  */ 
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
@@ -59,53 +59,55 @@
    This definition part is used to describe the page setting and 
    can be custom 
 */
-#define PAGE_SIZE               (uint32_t)FLASH_PAGE_SIZE  /* Page size */
+#define PAGE_SIZE (uint32_t)(2 * FLASH_PAGE_SIZE) /* Page size */
 
-#define PAGE0_NUMBER            (uint32_t)125
-#define PAGE0_BANKNUMBER        FLASH_BANK_1
+#define PAGE0_NUMBER (uint32_t)125
+#define PAGE0_BANKNUMBER FLASH_BANK_1
 
-#define PAGE1_NUMBER            (uint32_t)126
-#define PAGE1_BANKNUMBER        FLASH_BANK_1
+#define PAGE1_NUMBER (uint32_t)127
+#define PAGE1_BANKNUMBER FLASH_BANK_1
 
 /* Pages 0 and 1 base and end addresses */
-#define PAGE0_BASE_ADDRESS     (uint32_t)(FLASH_BASE + PAGE0_NUMBER*PAGE_SIZE)
+#define PAGE0_BASE_ADDRESS (uint32_t)(FLASH_BASE + PAGE0_NUMBER * PAGE_SIZE)
 
-#define PAGE1_BASE_ADDRESS     (uint32_t)(FLASH_BASE + PAGE1_NUMBER*PAGE_SIZE)
+#define PAGE1_BASE_ADDRESS (uint32_t)(FLASH_BASE + PAGE1_NUMBER * PAGE_SIZE)
 
 /* 
    End of the page definition 
 */
 
 /* Page stat header */
-#define EE_PAGESTAT_ERASED  ((uint64_t)0xFFFFFFFFFFFFFFFF)
-#define EE_PAGESTAT_VALID   ((uint64_t)0x0000000000000000)
+#define EE_PAGESTAT_ERASED ((uint64_t)0xFFFFFFFFFFFFFFFF)
+#define EE_PAGESTAT_VALID ((uint64_t)0x0000000000000000)
 #define EE_PAGESTAT_RECEIVE ((uint64_t)0x00000000AAAAAAAA)
 
 /* Page stat : size of the data in flash is 64 bits */
-#define EE_DATA_SIZE             8
-#define EE_DATA_TYPE             uint64_t    
-#define EE_DATA_SHIFT            16
-#define EE_MASK_VIRTUALADRESS    (uint64_t)0x00000000FFFF0000
-#define EE_MASK_DATA             (uint64_t)0xFFFFFFFF00000000
-#define EE_MASK_FULL             (uint64_t)0xFFFFFFFFFFFFFFFF
+#define EE_DATA_SIZE 8
+#define EE_DATA_TYPE uint64_t
+#define EE_DATA_SHIFT 16
+#define EE_MASK_VIRTUALADRESS (uint64_t)0x00000000FFFF0000
+#define EE_MASK_DATA (uint64_t)0xFFFFFFFF00000000
+#define EE_MASK_FULL (uint64_t)0xFFFFFFFFFFFFFFFF
 
 /* Type of find requested : 
        READ -> page in valid state 
        WRTIE --> page in recpetion state or valid state
        ERASE --> page in erase state */
-typedef enum {
-   FIND_READ_PAGE,
-   FIND_WRITE_PAGE,
-   FIND_ERASE_PAGE
+typedef enum
+{
+  FIND_READ_PAGE,
+  FIND_WRITE_PAGE,
+  FIND_ERASE_PAGE
 } EE_Find_type;
 
 /* No valid page define */
-#define EE_NO_VALID_PAGE         ((uint32_t)0xFFFFFFFF)
+#define EE_NO_VALID_PAGE ((uint32_t)0xFFFFFFFF)
 
 /* defintion of the different type of page transfer 
         NORMAL  -> copie data pag source to page destination 
         RECOVER -> resolve confict when one page reception and a second is valid */
-typedef enum {
+typedef enum
+{
   EE_TRANSFER_NORMAL,
   EE_TRANSFER_RECOVER
 } EE_Transfer_type;
@@ -137,146 +139,56 @@ static uint32_t EE_GetBankNumber(uint32_t Address);
 EE_Status EE_Init(void)
 {
   EE_DATA_TYPE pagestatus0, pagestatus1, addressvalue;
-  
+
   /* check the variable definition */
-  for(uint32_t varidx = 0; varidx < NB_OF_VAR; varidx++)
+  for (uint32_t varidx = 0; varidx < NB_OF_VAR; varidx++)
   {
-    if(VirtAddVarTab[varidx] == 0xFFFF)
+    if (VirtAddVarTab[varidx] == 0xFFFF)
     {
       return EE_INVALID_VIRTUALADRESS;
     }
   }
-  
+
   /* Get Page0 status */
-  pagestatus0 = (*(__IO EE_DATA_TYPE*)PAGE0_BASE_ADDRESS);
+  pagestatus0 = (*(__IO EE_DATA_TYPE *)PAGE0_BASE_ADDRESS);
   /* Get Page1 status */
-  pagestatus1 = (*(__IO EE_DATA_TYPE*)PAGE1_BASE_ADDRESS);
-  
+  pagestatus1 = (*(__IO EE_DATA_TYPE *)PAGE1_BASE_ADDRESS);
+
   /* Check for invalid header states and repair if necessary */
   switch (pagestatus0)
   {
   case EE_PAGESTAT_ERASED:
+  {
+    if (pagestatus1 == EE_PAGESTAT_VALID) /* Page0 erased, Page1 valid */
     {
-      if (pagestatus1 == EE_PAGESTAT_VALID) /* Page0 erased, Page1 valid */
+      /* Erase Page0 */
+      if (EE_VerifyPageFullyErased(PAGE0_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
       {
-        /* Erase Page0 */
-        if(EE_VerifyPageFullyErased(PAGE0_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
+        if (EE_PageErase(PAGE0_NUMBER, PAGE0_BANKNUMBER) != EE_OK)
         {
-          if(EE_PageErase(PAGE0_NUMBER, PAGE0_BANKNUMBER) != EE_OK)
-          {
-            return EE_ERASE_ERROR;
-          }
-        }
-      }
-      else if (pagestatus1 == EE_PAGESTAT_RECEIVE) /* Page0 erased, Page1 receive */
-      {
-        /* Erase Page0 */
-        if(EE_VerifyPageFullyErased(PAGE0_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
-        { 
-          if(EE_PageErase(PAGE0_NUMBER,PAGE0_BANKNUMBER) != EE_OK)
-          {
-            return EE_ERASE_ERROR;
-          }
-        }
-        
-        /* Mark Page1 as valid */
-        /* If program operation was failed, a Flash error code is returned */
-        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, PAGE1_BASE_ADDRESS, EE_PAGESTAT_VALID) != HAL_OK)
-        {
-          return EE_WRITE_ERROR;
-        }
-      }
-      else /* First EEPROM access (Page0&1 are erased) or invalid state -> format EEPROM */
-      {
-        /* Erase both Page0 and Page1 and set Page0 as valid page */
-        /* If erase/program operation was failed, a Flash error code is returned */
-        if (EE_Format() != EE_OK)
-        {
-          return EE_FORMAT_ERROR;
+          return EE_ERASE_ERROR;
         }
       }
     }
-    break;
-    
-  case EE_PAGESTAT_RECEIVE:
+    else if (pagestatus1 == EE_PAGESTAT_RECEIVE) /* Page0 erased, Page1 receive */
     {
-      if (pagestatus1 == EE_PAGESTAT_VALID) /* Page0 receive, Page1 valid */
+      /* Erase Page0 */
+      if (EE_VerifyPageFullyErased(PAGE0_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
       {
-        /* Get the first udpated value from the reception page */
-        addressvalue = (*(__IO EE_DATA_TYPE*)(PAGE0_BASE_ADDRESS + EE_DATA_SIZE));
-        /* Restart the interrupted page transfer */
-        if(EE_PageTransfer((addressvalue & EE_MASK_VIRTUALADRESS) >> EE_DATA_SHIFT, (EE_DATA_STORED_TYPE)((addressvalue & EE_MASK_DATA) >> (EE_DATA_SHIFT+16)), EE_TRANSFER_RECOVER) != EE_OK)
+        if (EE_PageErase(PAGE0_NUMBER, PAGE0_BANKNUMBER) != EE_OK)
         {
-          return EE_TRANSFER_ERROR;
+          return EE_ERASE_ERROR;
         }
       }
-      else if (pagestatus1 == EE_PAGESTAT_ERASED) /* Page0 receive, Page1 erased */
+
+      /* Mark Page1 as valid */
+      /* If program operation was failed, a Flash error code is returned */
+      if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, PAGE1_BASE_ADDRESS, EE_PAGESTAT_VALID) != HAL_OK)
       {
-        /* Erase Page1 */
-        if(EE_VerifyPageFullyErased(PAGE1_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
-        { 
-          /* If erase operation was failed, a Flash error code is returned */
-          if(EE_PageErase(PAGE1_NUMBER,PAGE1_BANKNUMBER) != EE_OK)
-          {
-            return EE_ERASE_ERROR;
-          }
-        }
-        /* Mark Page0 as valid */
-        /* If program operation was failed, a Flash error code is returned */
-        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, PAGE0_BASE_ADDRESS, EE_PAGESTAT_VALID) != HAL_OK)
-        {
-          return EE_WRITE_ERROR;
-        }
-      }
-      else /* Invalid state -> format eeprom */
-      {
-        /* Erase both Page0 and Page1 and set Page0 as valid page */
-        /* If erase/program operation was failed, a Flash error code is returned */
-        if (EE_Format() != EE_OK)
-        {
-          return EE_FORMAT_ERROR;
-        }
+        return EE_WRITE_ERROR;
       }
     }
-    break;
-    
-  case EE_PAGESTAT_VALID:
-    {
-      if (pagestatus1 == EE_PAGESTAT_VALID) /* Invalid state -> format eeprom */
-      {
-        /* Erase both Page0 and Page1 and set Page0 as valid page */
-        /* If erase/program operation was failed, a Flash error code is returned */
-        if (EE_Format() != EE_OK)
-        {
-          return EE_FORMAT_ERROR;
-        }
-      }
-      else if (pagestatus1 == EE_PAGESTAT_ERASED) /* Page0 valid, Page1 erased */
-      {
-        /* Erase Page1 */
-        if(EE_VerifyPageFullyErased(PAGE1_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
-        { 
-          /* If erase operation was failed, a Flash error code is returned */
-          if(EE_PageErase(PAGE1_NUMBER,PAGE1_BANKNUMBER) != EE_OK)
-          {
-            return EE_ERASE_ERROR;
-          }
-        }
-      }
-      else /* Page0 valid, Page1 receive */
-      {
-        /* Get the first udpated value from the reception page */
-        addressvalue = (*(__IO EE_DATA_TYPE*)(PAGE1_BASE_ADDRESS + EE_DATA_SIZE));
-        /* Restart the interrupted page transfer */
-        if(EE_PageTransfer((addressvalue & EE_MASK_VIRTUALADRESS) >> EE_DATA_SHIFT, (EE_DATA_STORED_TYPE)((addressvalue & EE_MASK_DATA) >> (EE_DATA_SHIFT+16)), EE_TRANSFER_RECOVER) != EE_OK)
-        {
-          return EE_TRANSFER_ERROR;
-        }
-      }
-    }
-    break;
-    
-  default:  /* Any other state -> format eeprom */
+    else /* First EEPROM access (Page0&1 are erased) or invalid state -> format EEPROM */
     {
       /* Erase both Page0 and Page1 and set Page0 as valid page */
       /* If erase/program operation was failed, a Flash error code is returned */
@@ -285,9 +197,99 @@ EE_Status EE_Init(void)
         return EE_FORMAT_ERROR;
       }
     }
-    break;
   }
-  
+  break;
+
+  case EE_PAGESTAT_RECEIVE:
+  {
+    if (pagestatus1 == EE_PAGESTAT_VALID) /* Page0 receive, Page1 valid */
+    {
+      /* Get the first udpated value from the reception page */
+      addressvalue = (*(__IO EE_DATA_TYPE *)(PAGE0_BASE_ADDRESS + EE_DATA_SIZE));
+      /* Restart the interrupted page transfer */
+      if (EE_PageTransfer((addressvalue & EE_MASK_VIRTUALADRESS) >> EE_DATA_SHIFT, (EE_DATA_STORED_TYPE)((addressvalue & EE_MASK_DATA) >> (EE_DATA_SHIFT + 16)), EE_TRANSFER_RECOVER) != EE_OK)
+      {
+        return EE_TRANSFER_ERROR;
+      }
+    }
+    else if (pagestatus1 == EE_PAGESTAT_ERASED) /* Page0 receive, Page1 erased */
+    {
+      /* Erase Page1 */
+      if (EE_VerifyPageFullyErased(PAGE1_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
+      {
+        /* If erase operation was failed, a Flash error code is returned */
+        if (EE_PageErase(PAGE1_NUMBER, PAGE1_BANKNUMBER) != EE_OK)
+        {
+          return EE_ERASE_ERROR;
+        }
+      }
+      /* Mark Page0 as valid */
+      /* If program operation was failed, a Flash error code is returned */
+      if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, PAGE0_BASE_ADDRESS, EE_PAGESTAT_VALID) != HAL_OK)
+      {
+        return EE_WRITE_ERROR;
+      }
+    }
+    else /* Invalid state -> format eeprom */
+    {
+      /* Erase both Page0 and Page1 and set Page0 as valid page */
+      /* If erase/program operation was failed, a Flash error code is returned */
+      if (EE_Format() != EE_OK)
+      {
+        return EE_FORMAT_ERROR;
+      }
+    }
+  }
+  break;
+
+  case EE_PAGESTAT_VALID:
+  {
+    if (pagestatus1 == EE_PAGESTAT_VALID) /* Invalid state -> format eeprom */
+    {
+      /* Erase both Page0 and Page1 and set Page0 as valid page */
+      /* If erase/program operation was failed, a Flash error code is returned */
+      if (EE_Format() != EE_OK)
+      {
+        return EE_FORMAT_ERROR;
+      }
+    }
+    else if (pagestatus1 == EE_PAGESTAT_ERASED) /* Page0 valid, Page1 erased */
+    {
+      /* Erase Page1 */
+      if (EE_VerifyPageFullyErased(PAGE1_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
+      {
+        /* If erase operation was failed, a Flash error code is returned */
+        if (EE_PageErase(PAGE1_NUMBER, PAGE1_BANKNUMBER) != EE_OK)
+        {
+          return EE_ERASE_ERROR;
+        }
+      }
+    }
+    else /* Page0 valid, Page1 receive */
+    {
+      /* Get the first udpated value from the reception page */
+      addressvalue = (*(__IO EE_DATA_TYPE *)(PAGE1_BASE_ADDRESS + EE_DATA_SIZE));
+      /* Restart the interrupted page transfer */
+      if (EE_PageTransfer((addressvalue & EE_MASK_VIRTUALADRESS) >> EE_DATA_SHIFT, (EE_DATA_STORED_TYPE)((addressvalue & EE_MASK_DATA) >> (EE_DATA_SHIFT + 16)), EE_TRANSFER_RECOVER) != EE_OK)
+      {
+        return EE_TRANSFER_ERROR;
+      }
+    }
+  }
+  break;
+
+  default: /* Any other state -> format eeprom */
+  {
+    /* Erase both Page0 and Page1 and set Page0 as valid page */
+    /* If erase/program operation was failed, a Flash error code is returned */
+    if (EE_Format() != EE_OK)
+    {
+      return EE_FORMAT_ERROR;
+    }
+  }
+  break;
+  }
+
   return EE_OK;
 }
 
@@ -306,12 +308,12 @@ EE_Status EE_VerifyPageFullyErased(uint32_t Address, uint32_t PageSize)
 {
   EE_Status readstatus = EE_PAGE_ERASED;
   uint32_t counter = 0;
-     
+
   /* Check each active page address starting from end */
   while (counter < PageSize)
   {
     /* Compare the read address with the virtual address */
-    if ((*(__IO EE_DATA_TYPE*)(Address+counter)) != EE_PAGESTAT_ERASED)
+    if ((*(__IO EE_DATA_TYPE *)(Address + counter)) != EE_PAGESTAT_ERASED)
     {
       /* In case variable value is read, reset readstatus flag */
       readstatus = EE_PAGE_NOTERASED;
@@ -320,7 +322,7 @@ EE_Status EE_VerifyPageFullyErased(uint32_t Address, uint32_t PageSize)
     /* Next address location */
     counter = counter + EE_DATA_SIZE;
   }
-  
+
   /* Return readstatus value: (0: Page not erased, 1: Page erased) */
   return readstatus;
 }
@@ -335,27 +337,27 @@ EE_Status EE_VerifyPageFullyErased(uint32_t Address, uint32_t PageSize)
   *           - EE_NO_DATA: if the variable was not found
   *           - EE_ERROR_NOVALID_PAGE: if no valid page was found.
   */
-EE_Status EE_ReadVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE* Data)
+EE_Status EE_ReadVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE *Data)
 {
   EE_DATA_TYPE addressvalue;
   uint32_t counter = PAGE_SIZE - EE_DATA_SIZE;
-  
+
   /* Get active Page for read operation */
   uint32_t validpageadresse = EE_FindPage(FIND_READ_PAGE);
 
   /* Check if there is no valid page */
   if (validpageadresse == EE_NO_VALID_PAGE)
   {
-    return  EE_ERROR_NOVALID_PAGE;
+    return EE_ERROR_NOVALID_PAGE;
   }
 
   /* Check each active page address starting from end */
   while (counter >= EE_DATA_SIZE)
   {
     /* Get the current location content to be compared with virtual address */
-    addressvalue = (*(__IO EE_DATA_TYPE*)(validpageadresse + counter));
-		if(addressvalue != EE_PAGESTAT_ERASED)
-	  {
+    addressvalue = (*(__IO EE_DATA_TYPE *)(validpageadresse + counter));
+    if (addressvalue != EE_PAGESTAT_ERASED)
+    {
       /* Compare the read address with the virtual address */
       if ((addressvalue & EE_MASK_VIRTUALADRESS) == ((EE_DATA_TYPE)VirtAddress << EE_DATA_SHIFT))
       {
@@ -370,7 +372,7 @@ EE_Status EE_ReadVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYP
   }
 
   /* Return readstatus value: (EE_OK: variable exist, EE_ERROR: variable doesn't exist) */
-  return EE_NO_DATA;                    
+  return EE_NO_DATA;
 }
 
 /**
@@ -384,10 +386,10 @@ EE_Status EE_ReadVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYP
 EE_Status EE_WriteVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE Data)
 {
   EE_Status status;
-  
+
   /* Write the variable virtual address and value in the EEPROM */
   status = EE_VerifyPageFullWriteVariable(VirtAddress, Data);
-  if( status == EE_PAGE_FULL)
+  if (status == EE_PAGE_FULL)
   {
     /* In case the EEPROM active page is full */
     /* Perform Page transfer */
@@ -408,7 +410,7 @@ EE_Status EE_WriteVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TY
 static EE_Status EE_Format(void)
 {
   /* Erase Page0 */
-  if(EE_VerifyPageFullyErased(PAGE0_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
+  if (EE_VerifyPageFullyErased(PAGE0_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
   {
     if (EE_PageErase(PAGE0_NUMBER, PAGE0_BANKNUMBER) != EE_OK)
     {
@@ -421,16 +423,16 @@ static EE_Status EE_Format(void)
   {
     return EE_WRITE_ERROR;
   }
-      
+
   /* Erase Page1 */
-  if(EE_VerifyPageFullyErased(PAGE1_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
-  {  
+  if (EE_VerifyPageFullyErased(PAGE1_BASE_ADDRESS, PAGE_SIZE) == EE_PAGE_NOTERASED)
+  {
     if (EE_PageErase(PAGE1_NUMBER, PAGE1_BANKNUMBER) != EE_OK)
     {
       return EE_ERASE_ERROR;
     }
   }
-  
+
   return EE_OK;
 }
 
@@ -448,13 +450,13 @@ static EE_Status EE_Format(void)
 static uint32_t EE_FindPage(EE_Find_type Operation)
 {
   EE_DATA_TYPE pagestatus0, pagestatus1;
-  
+
   /* Get Page0 actual status */
-  pagestatus0 = (*(__IO EE_DATA_TYPE*)PAGE0_BASE_ADDRESS);
-  
+  pagestatus0 = (*(__IO EE_DATA_TYPE *)PAGE0_BASE_ADDRESS);
+
   /* Get Page1 actual status */
-  pagestatus1 = (*(__IO EE_DATA_TYPE*)PAGE1_BASE_ADDRESS);
-  
+  pagestatus1 = (*(__IO EE_DATA_TYPE *)PAGE1_BASE_ADDRESS);
+
   /* Write or read operation */
   if (Operation == FIND_WRITE_PAGE)
   {
@@ -464,11 +466,11 @@ static uint32_t EE_FindPage(EE_Find_type Operation)
       /* Page0 receiving data */
       if (pagestatus0 == EE_PAGESTAT_RECEIVE)
       {
-        return PAGE0_BASE_ADDRESS;         /* Page0 valid */
+        return PAGE0_BASE_ADDRESS; /* Page0 valid */
       }
       else
       {
-        return PAGE1_BASE_ADDRESS;         /* Page1 valid */
+        return PAGE1_BASE_ADDRESS; /* Page1 valid */
       }
     }
     else if (pagestatus0 == EE_PAGESTAT_VALID)
@@ -476,16 +478,16 @@ static uint32_t EE_FindPage(EE_Find_type Operation)
       /* Page1 receiving data */
       if (pagestatus1 == EE_PAGESTAT_RECEIVE)
       {
-        return PAGE1_BASE_ADDRESS;         /* Page1 valid */
+        return PAGE1_BASE_ADDRESS; /* Page1 valid */
       }
       else
       {
-        return PAGE0_BASE_ADDRESS;         /* Page0 valid */
+        return PAGE0_BASE_ADDRESS; /* Page0 valid */
       }
     }
     else
     {
-      return EE_NO_VALID_PAGE;   /* No valid Page */
+      return EE_NO_VALID_PAGE; /* No valid Page */
     }
   }
   else if (Operation == FIND_READ_PAGE)
@@ -493,25 +495,25 @@ static uint32_t EE_FindPage(EE_Find_type Operation)
     /* ---- Read operation ---- */
     if (pagestatus0 == EE_PAGESTAT_VALID)
     {
-      return PAGE0_BASE_ADDRESS;           /* Page0 valid */
+      return PAGE0_BASE_ADDRESS; /* Page0 valid */
     }
     else if (pagestatus1 == EE_PAGESTAT_VALID)
     {
-      return PAGE1_BASE_ADDRESS;           /* Page1 valid */
+      return PAGE1_BASE_ADDRESS; /* Page1 valid */
     }
     else
     {
-      return EE_NO_VALID_PAGE ;  /* No valid Page */
+      return EE_NO_VALID_PAGE; /* No valid Page */
     }
   }
   else if (Operation == FIND_ERASE_PAGE)
   {
     /* ---- Return the erased page */
-    if(pagestatus0 == EE_PAGESTAT_ERASED)
+    if (pagestatus0 == EE_PAGESTAT_ERASED)
     {
       return PAGE0_BASE_ADDRESS;
     }
-    if(pagestatus1 == EE_PAGESTAT_ERASED)
+    if (pagestatus1 == EE_PAGESTAT_ERASED)
     {
       return PAGE1_BASE_ADDRESS;
     }
@@ -520,7 +522,7 @@ static uint32_t EE_FindPage(EE_Find_type Operation)
   {
     return EE_NO_VALID_PAGE;
   }
-  
+
   return EE_NO_VALID_PAGE;
 }
 
@@ -535,27 +537,26 @@ static uint32_t EE_FindPage(EE_Find_type Operation)
   */
 static EE_Status EE_VerifyPageFullWriteVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TYPE Data)
 {
-  uint32_t count = EE_DATA_SIZE; /* start the check after the header */ 
- 
+  uint32_t count = EE_DATA_SIZE; /* start the check after the header */
+
   /* Get valid Page for write operation */
   uint32_t validpage = EE_FindPage(FIND_WRITE_PAGE);
   /* Check if there is no valid page */
-  if(validpage == EE_NO_VALID_PAGE)
+  if (validpage == EE_NO_VALID_PAGE)
   {
-    return  EE_ERROR_NOVALID_PAGE;
+    return EE_ERROR_NOVALID_PAGE;
   }
-  
+
   /* Check each active page address starting from begining */
-  while ( count < PAGE_SIZE)
+  while (count < PAGE_SIZE)
   {
     /* Verify if address contents is erased */
-    if ((*(__IO EE_DATA_TYPE*)(validpage+count)) == EE_MASK_FULL)
+    if ((*(__IO EE_DATA_TYPE *)(validpage + count)) == EE_MASK_FULL)
     {
       /* Set variable data + virtual adress */
       /* If program operation was failed, a Flash error code is returned */
-      if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, validpage+count, 
-							((((EE_DATA_TYPE)Data) << 16) | VirtAddress) << EE_DATA_SHIFT
-							) != HAL_OK)
+      if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, validpage + count,
+                            ((((EE_DATA_TYPE)Data) << 16) | VirtAddress) << EE_DATA_SHIFT) != HAL_OK)
       {
         return EE_WRITE_ERROR;
       }
@@ -585,26 +586,26 @@ static EE_Status EE_PageTransfer(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STO
   uint32_t activepageaddress, newpageaddress;
   uint32_t varidx = 0;
   EE_DATA_STORED_TYPE DataValue;
-  
+
   /* Get active Page for read operation */
   activepageaddress = EE_FindPage(FIND_READ_PAGE);
-  if(activepageaddress == EE_NO_VALID_PAGE)
+  if (activepageaddress == EE_NO_VALID_PAGE)
   {
     return EE_ERROR_NOVALID_PAGE;
   }
 
   /* Get active Page for read operation */
-  newpageaddress = EE_FindPage((type == EE_TRANSFER_NORMAL?FIND_ERASE_PAGE:FIND_WRITE_PAGE));
-  if(newpageaddress == EE_NO_VALID_PAGE)
+  newpageaddress = EE_FindPage((type == EE_TRANSFER_NORMAL ? FIND_ERASE_PAGE : FIND_WRITE_PAGE));
+  if (newpageaddress == EE_NO_VALID_PAGE)
   {
     return EE_ERROR_NOVALID_PAGE;
   }
 
   /* Mark the ativepage at receive state */
   /* If program operation was failed, a Flash error code is returned */
-  if(type == EE_TRANSFER_NORMAL)
+  if (type == EE_TRANSFER_NORMAL)
   {
-    if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, newpageaddress, EE_PAGESTAT_RECEIVE) != HAL_OK)
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, newpageaddress, EE_PAGESTAT_RECEIVE) != HAL_OK)
     {
       return EE_WRITE_ERROR;
     }
@@ -612,7 +613,7 @@ static EE_Status EE_PageTransfer(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STO
 
   /* Write the variable passed as parameter in the new active page */
   /* If program operation was failed, a Flash error code is returned */
-  if(EE_VerifyPageFullWriteVariable(VirtAddress, Data) != EE_OK)
+  if (EE_VerifyPageFullWriteVariable(VirtAddress, Data) != EE_OK)
   {
     return EE_WRITE_ERROR;
   }
@@ -620,15 +621,15 @@ static EE_Status EE_PageTransfer(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STO
   /* Transfer process: transfer variables from old to the new active page */
   for (varidx = 0; varidx < NB_OF_VAR; varidx++)
   {
-    if (VirtAddVarTab[varidx] != VirtAddress)  /* Check each variable except the one passed as parameter */
+    if (VirtAddVarTab[varidx] != VirtAddress) /* Check each variable except the one passed as parameter */
     {
       /* Read the other last variable updates */
-      if(EE_ReadVariable(VirtAddVarTab[varidx], &DataValue) == EE_OK)
+      if (EE_ReadVariable(VirtAddVarTab[varidx], &DataValue) == EE_OK)
       {
         /* In case variable corresponding to the virtual address was found */
         /* Transfer the variable to the new active page */
         /* If program operation was failed, a Flash error code is returned */
-        if(EE_VerifyPageFullWriteVariable(VirtAddVarTab[varidx], DataValue) != EE_OK)
+        if (EE_VerifyPageFullWriteVariable(VirtAddVarTab[varidx], DataValue) != EE_OK)
         {
           return EE_WRITE_ERROR;
         }
@@ -636,14 +637,14 @@ static EE_Status EE_PageTransfer(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STO
     }
   }
 
-  /* Erase the current VALID_PAGE */ 
-  if(EE_PageErase(EE_GetPageNumber(activepageaddress), EE_GetBankNumber(activepageaddress)) != EE_OK)
+  /* Erase the current VALID_PAGE */
+  if (EE_PageErase(EE_GetPageNumber(activepageaddress), EE_GetBankNumber(activepageaddress)) != EE_OK)
   {
     return EE_ERASE_ERROR;
   }
-  
+
   /* Set new Page status to VALID_PAGE status */
-  if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, newpageaddress, EE_PAGESTAT_VALID) != HAL_OK)
+  if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, newpageaddress, EE_PAGESTAT_VALID) != HAL_OK)
   {
     return EE_WRITE_ERROR;
   }
@@ -664,12 +665,12 @@ static EE_Status EE_PageTransfer(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STO
 static EE_Status EE_PageErase(uint32_t Page, uint16_t BankNb)
 {
   FLASH_EraseInitTypeDef s_eraseinit;
-  uint32_t page_error; 
-  
-  s_eraseinit.TypeErase   = FLASH_TYPEERASE_PAGES;
-  s_eraseinit.NbPages     = 1;
-  s_eraseinit.Page        = Page;
-  s_eraseinit.Banks       = BankNb;
+  uint32_t page_error;
+
+  s_eraseinit.TypeErase = FLASH_TYPEERASE_PAGES;
+  s_eraseinit.NbPages = 2;
+  s_eraseinit.Page = Page;
+  s_eraseinit.Banks = BankNb;
 
   /* Erase the old Page: Set old Page status to ERASED status */
   if (HAL_FLASHEx_Erase(&s_eraseinit, &page_error) != HAL_OK)
@@ -697,14 +698,44 @@ static uint32_t EE_GetPageNumber(uint32_t Address)
 static uint32_t EE_GetBankNumber(uint32_t Address)
 {
   uint32_t bank;
-  
 
-      bank = FLASH_BANK_1;
-  
+  bank = FLASH_BANK_1;
+
   return bank;
-}  
+}
 /**
   * @}
-  */ 
+  */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+
+uint16_t usReadRes;
+uint16_t usWriteRes;
+
+uint16_t usEE_Read(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint16_t usLen)
+{
+  __disable_irq();
+  assert_param(usLen % 4 == 0);
+  usLen /= 4;
+  for (uint16_t i = 0; i < usLen; i++)
+  {
+    usReadRes = EE_ReadVariable(usAdd + i, pusDat + i);
+  }
+  __enable_irq();
+  return 0;
+}
+uint16_t usEE_Write(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint16_t usLen)
+{
+  __disable_irq();
+  assert_param(usLen % 4 == 0);
+  usLen /= 4;
+  HAL_FLASH_Unlock();
+  for (uint16_t i = 0; i < usLen; i++)
+  {
+    EE_DATA_STORED_TYPE Num = *(pusDat + i);
+    usWriteRes = EE_WriteVariable(usAdd + i, (Num << 16) | Num);
+  }
+  HAL_FLASH_Lock();
+  __enable_irq();
+  return 0;
+}
