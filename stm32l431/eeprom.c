@@ -117,7 +117,7 @@ typedef enum
 /* Global variable used to store variable value in read sequence */
 
 /* Virtual address defined by the user: 0xFFFF value is prohibited */
-extern EE_VIRTUALADDRESS_TYPE VirtAddVarTab[];
+// extern EE_VIRTUALADDRESS_TYPE VirtAddVarTab[];
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -143,7 +143,7 @@ EE_Status EE_Init(void)
   /* check the variable definition */
   for (uint32_t varidx = 0; varidx < NB_OF_VAR; varidx++)
   {
-    if (VirtAddVarTab[varidx] == 0xFFFF)
+    if (varidx == 0xFFFF)
     {
       return EE_INVALID_VIRTUALADRESS;
     }
@@ -621,15 +621,15 @@ static EE_Status EE_PageTransfer(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STO
   /* Transfer process: transfer variables from old to the new active page */
   for (varidx = 0; varidx < NB_OF_VAR; varidx++)
   {
-    if (VirtAddVarTab[varidx] != VirtAddress) /* Check each variable except the one passed as parameter */
+    if (varidx != VirtAddress) /* Check each variable except the one passed as parameter */
     {
       /* Read the other last variable updates */
-      if (EE_ReadVariable(VirtAddVarTab[varidx], &DataValue) == EE_OK)
+      if (EE_ReadVariable(varidx, &DataValue) == EE_OK)
       {
         /* In case variable corresponding to the virtual address was found */
         /* Transfer the variable to the new active page */
         /* If program operation was failed, a Flash error code is returned */
-        if (EE_VerifyPageFullWriteVariable(VirtAddVarTab[varidx], DataValue) != EE_OK)
+        if (EE_VerifyPageFullWriteVariable(varidx, DataValue) != EE_OK)
         {
           return EE_WRITE_ERROR;
         }

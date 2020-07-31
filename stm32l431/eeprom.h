@@ -75,7 +75,7 @@ typedef enum
 #define EE_DATA_STORED_TYPE uint32_t
 #define EE_VIRTUALADDRESS_TYPE uint16_t
 /* Variables' number */
-#define NB_OF_VAR ((uint8_t)0x03)
+#define NB_OF_VAR ((uint16_t)500)
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
