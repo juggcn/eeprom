@@ -61,16 +61,16 @@
 */
 #define PAGE_SIZE (uint32_t)(2 * FLASH_PAGE_SIZE) /* Page size */
 
-#define PAGE0_NUMBER (uint32_t)125
+#define PAGE0_NUMBER (uint32_t)124
 #define PAGE0_BANKNUMBER FLASH_BANK_1
 
-#define PAGE1_NUMBER (uint32_t)127
+#define PAGE1_NUMBER (uint32_t)126
 #define PAGE1_BANKNUMBER FLASH_BANK_1
 
 /* Pages 0 and 1 base and end addresses */
-#define PAGE0_BASE_ADDRESS (uint32_t)(FLASH_BASE + PAGE0_NUMBER * PAGE_SIZE)
+#define PAGE0_BASE_ADDRESS (uint32_t)(FLASH_BASE + PAGE0_NUMBER * FLASH_PAGE_SIZE)
 
-#define PAGE1_BASE_ADDRESS (uint32_t)(FLASH_BASE + PAGE1_NUMBER * PAGE_SIZE)
+#define PAGE1_BASE_ADDRESS (uint32_t)(FLASH_BASE + PAGE1_NUMBER * FLASH_PAGE_SIZE)
 
 /* 
    End of the page definition 
@@ -733,7 +733,7 @@ uint16_t usEE_Write(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint
   for (uint16_t i = 0; i < usLen; i++)
   {
     EE_DATA_STORED_TYPE Num = *(pusDat + i);
-    usWriteRes = EE_WriteVariable(usAdd + i, (Num << 16) | Num);
+    usWriteRes = EE_WriteVariable(usAdd + i, Num);
   }
   HAL_FLASH_Lock();
   __enable_irq();
