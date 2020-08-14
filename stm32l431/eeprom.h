@@ -50,6 +50,11 @@
 #ifndef __EEPROM_H
 #define __EEPROM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* Includes ------------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Define of the return value */
@@ -87,6 +92,9 @@ EE_Status EE_WriteVariable(EE_VIRTUALADDRESS_TYPE VirtAddress, EE_DATA_STORED_TY
 extern uint16_t usEE_Read(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint16_t usLen);
 extern uint16_t usEE_Write(EE_DATA_STORED_TYPE usAdd, EE_DATA_STORED_TYPE *pusDat, uint16_t usLen);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* __EEPROM_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
