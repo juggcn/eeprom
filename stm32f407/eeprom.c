@@ -735,28 +735,28 @@ uint16_t usWriteRes;
 
 uint16_t usEE_Read(uint16_t usAdd, uint16_t *pusDat, uint16_t usLen)
 {
-  __disable_irq();
-  assert_param(usLen % 2 == 0);
-  usLen /= 2;
-  for (uint16_t i = 0; i < usLen; i++)
-  {
-    usReadRes = EE_ReadVariable(usAdd + i, pusDat + i);
-  }
-  __enable_irq();
+//  __disable_irq();
+//  assert_param(usLen % 2 == 0);
+//  usLen /= 2;
+//  for (uint16_t i = 0; i < usLen; i++)
+//  {
+//    usReadRes = EE_ReadVariable(usAdd + i, pusDat + i);
+//  }
+//  __enable_irq();
   return 0;
 }
 uint16_t usEE_Write(uint16_t usAdd, uint16_t *pusDat, uint16_t usLen)
 {
-  __disable_irq();
-  assert_param(usLen % 2 == 0);
-  usLen /= 2;
-  HAL_FLASH_Unlock();
-  for (uint16_t i = 0; i < usLen; i++)
-  {
-    usWriteRes = EE_WriteVariable(usAdd + i, *(pusDat + i));
-  }
-  HAL_FLASH_Lock();
-  __enable_irq();
+//  __disable_irq();
+//  assert_param(usLen % 2 == 0);
+//  usLen /= 2;
+//  HAL_FLASH_Unlock();
+//  for (uint16_t i = 0; i < usLen; i++)
+//  {
+//    usWriteRes = EE_WriteVariable(usAdd + i, *(pusDat + i));
+//  }
+//  HAL_FLASH_Lock();
+//  __enable_irq();
   return 0;
 }
 
