@@ -41,8 +41,6 @@ uint8_t ucSTMFlashRead(uint32_t addr, uint32_t *buf, size_t size)
     return 0;
 }
 
-HAL_StatusTypeDef xFlashErr;
-
 uint8_t ucSTMFlashWrite(uint32_t addr, const uint32_t *buf, size_t size)
 {
     uint8_t ucResult = 0;
@@ -55,8 +53,8 @@ uint8_t ucSTMFlashWrite(uint32_t addr, const uint32_t *buf, size_t size)
     for (i = 0; i < size; i += 4, buf++, addr += 4)
     {
         /* write data */
-        xFlashErr = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *buf);
-			  
+        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *buf);
+
         uint32_t read_data = *(uint32_t *)addr;
         /* check data */
         if (read_data != *buf)
