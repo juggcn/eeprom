@@ -66,7 +66,7 @@ static uint16_t EE_VerifyPageFullyErased(uint32_t Address);
 #include "STMFlash.h"
 #include "includes.h"
 
-static uint16_t EE_FlashErase(uint32_t addr, size_t size)
+uint16_t EE_FlashErase(uint32_t addr, size_t size)
 {
   uint16_t Result = 0;
 #if 1

@@ -1,4 +1,4 @@
-﻿#include "STMFlash.h"
+#include "STMFlash.h"
 
 uint8_t ucSTMFlashErase(uint32_t addr, size_t size)
 {
@@ -41,11 +41,12 @@ uint8_t ucSTMFlashRead(uint32_t addr, uint32_t *buf, size_t size)
     return 0;
 }
 
+HAL_StatusTypeDef xFlashErr;
+
 uint8_t ucSTMFlashWrite(uint32_t addr, const uint32_t *buf, size_t size)
 {
     uint8_t ucResult = 0;
     size_t i;
-    uint32_t read_data;
 
     assert_param(size % 4 == 0);
 
@@ -54,8 +55,9 @@ uint8_t ucSTMFlashWrite(uint32_t addr, const uint32_t *buf, size_t size)
     for (i = 0; i < size; i += 4, buf++, addr += 4)
     {
         /* write data */
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *buf);
-        read_data = *(uint32_t *)addr;
+        xFlashErr = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *buf);
+			  
+        uint32_t read_data = *(uint32_t *)addr;
         /* check data */
         if (read_data != *buf)
         {
@@ -66,4 +68,3 @@ uint8_t ucSTMFlashWrite(uint32_t addr, const uint32_t *buf, size_t size)
     HAL_FLASH_Lock();
     return ucResult;
 }
-
