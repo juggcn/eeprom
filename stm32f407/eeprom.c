@@ -381,11 +381,23 @@ uint16_t EE_ReadVariable(uint16_t VirtAddress, uint16_t *Data)
     return NO_VALID_PAGE;
   }
 
+  /*获取page的大小*/
+  uint32_t ulPageSize = PAGE0_SIZE;
+
+  if (ValidPage == PAGE0)
+  {
+    ulPageSize = PAGE0_SIZE;
+  }
+  else
+  {
+    ulPageSize = PAGE1_SIZE;
+  }
+
   /* Get the valid Page start Address */
-  PageStartAddress = (uint32_t)(EEPROM_START_ADDRESS + (uint32_t)(ValidPage * PAGE_SIZE));
+  PageStartAddress = (uint32_t)(EEPROM_START_ADDRESS + (uint32_t)(ValidPage * ulPageSize));
 
   /* Get the valid Page end Address */
-  Address = (uint32_t)((EEPROM_START_ADDRESS - 2) + (uint32_t)((1 + ValidPage) * PAGE_SIZE));
+  Address = (uint32_t)((EEPROM_START_ADDRESS - 2) + (uint32_t)((1 + ValidPage) * ulPageSize));
 
   /* Check each active page address starting from end */
   while (Address > (PageStartAddress + 2))
@@ -576,7 +588,7 @@ static uint16_t EE_VerifyPageFullWriteVariable(uint16_t VirtAddress, uint16_t Da
 {
   HAL_StatusTypeDef FlashStatus = HAL_OK;
   uint16_t ValidPage = PAGE0;
-  uint32_t Address = EEPROM_START_ADDRESS, PageEndAddress = EEPROM_START_ADDRESS + PAGE_SIZE;
+  uint32_t Address = EEPROM_START_ADDRESS, PageEndAddress = EEPROM_START_ADDRESS + PAGE0_SIZE;
 
   /* Get valid Page for write operation */
   ValidPage = EE_FindValidPage(WRITE_IN_VALID_PAGE);
@@ -586,12 +598,22 @@ static uint16_t EE_VerifyPageFullWriteVariable(uint16_t VirtAddress, uint16_t Da
   {
     return NO_VALID_PAGE;
   }
+  /*获取page的大小*/
+  uint32_t ulPageSize = PAGE0_SIZE;
 
+  if (ValidPage == PAGE0)
+  {
+    ulPageSize = PAGE0_SIZE;
+  }
+  else
+  {
+    ulPageSize = PAGE1_SIZE;
+  }
   /* Get the valid Page start Address */
-  Address = (uint32_t)(EEPROM_START_ADDRESS + (uint32_t)(ValidPage * PAGE_SIZE));
+  Address = (uint32_t)(EEPROM_START_ADDRESS + (uint32_t)(ValidPage * ulPageSize));
 
   /* Get the valid Page end Address */
-  PageEndAddress = (uint32_t)((EEPROM_START_ADDRESS - 1) + (uint32_t)((ValidPage + 1) * PAGE_SIZE));
+  PageEndAddress = (uint32_t)((EEPROM_START_ADDRESS - 1) + (uint32_t)((ValidPage + 1) * ulPageSize));
 
   /* Check each active page address starting from begining */
   while (Address < PageEndAddress)
