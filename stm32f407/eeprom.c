@@ -385,23 +385,16 @@ uint16_t EE_ReadVariable(uint16_t VirtAddress, uint16_t *Data)
     return NO_VALID_PAGE;
   }
 
-  /*获取page的大小*/
-  uint32_t ulPageSize = PAGE0_SIZE;
-
   if (ValidPage == PAGE0)
   {
-    ulPageSize = PAGE0_SIZE;
+    PageStartAddress = PAGE0_BASE_ADDRESS;
+    Address = PAGE0_END_ADDRESS - 1;
   }
   else
   {
-    ulPageSize = PAGE1_SIZE;
+    PageStartAddress = PAGE1_BASE_ADDRESS;
+    Address = PAGE1_END_ADDRESS - 1;
   }
-
-  /* Get the valid Page start Address */
-  PageStartAddress = (uint32_t)(EEPROM_START_ADDRESS + (uint32_t)(ValidPage * ulPageSize));
-
-  /* Get the valid Page end Address */
-  Address = (uint32_t)((EEPROM_START_ADDRESS - 2) + (uint32_t)((1 + ValidPage) * ulPageSize));
 
   /* Check each active page address starting from end */
   while (Address > (PageStartAddress + 2))
@@ -602,22 +595,17 @@ static uint16_t EE_VerifyPageFullWriteVariable(uint16_t VirtAddress, uint16_t Da
   {
     return NO_VALID_PAGE;
   }
-  /*获取page的大小*/
-  uint32_t ulPageSize = PAGE0_SIZE;
 
   if (ValidPage == PAGE0)
   {
-    ulPageSize = PAGE0_SIZE;
+    Address = PAGE0_BASE_ADDRESS;
+    PageEndAddress = PAGE0_END_ADDRESS - 1;
   }
   else
   {
-    ulPageSize = PAGE1_SIZE;
+    Address = PAGE1_BASE_ADDRESS;
+    PageEndAddress = PAGE1_END_ADDRESS - 1;
   }
-  /* Get the valid Page start Address */
-  Address = (uint32_t)(EEPROM_START_ADDRESS + (uint32_t)(ValidPage * ulPageSize));
-
-  /* Get the valid Page end Address */
-  PageEndAddress = (uint32_t)((EEPROM_START_ADDRESS - 1) + (uint32_t)((ValidPage + 1) * ulPageSize));
 
   /* Check each active page address starting from begining */
   while (Address < PageEndAddress)
@@ -758,42 +746,42 @@ static uint16_t EE_PageTransfer(uint16_t VirtAddress, uint16_t Data)
 /* Get sector number by address */
 static uint32_t GetSector(uint32_t Address)
 {
-	uint32_t sector = 0;
+  uint32_t sector = 0;
 
-	if((Address < ADDR_FLASH_SECTOR_1) && (Address >= ADDR_FLASH_SECTOR_0))
-	{
-		sector = FLASH_SECTOR_0;
-	}
-	else if((Address < ADDR_FLASH_SECTOR_2) && (Address >= ADDR_FLASH_SECTOR_1))
-	{
-		sector = FLASH_SECTOR_1;
-	}
-	else if((Address < ADDR_FLASH_SECTOR_3) && (Address >= ADDR_FLASH_SECTOR_2))
-	{
-		sector = FLASH_SECTOR_2;
-	}
-	else if((Address < ADDR_FLASH_SECTOR_4) && (Address >= ADDR_FLASH_SECTOR_3))
-	{
-		sector = FLASH_SECTOR_3;
-	}
-	else if((Address < ADDR_FLASH_SECTOR_5) && (Address >= ADDR_FLASH_SECTOR_4))
-	{
-		sector = FLASH_SECTOR_4;
-	}
-	else if((Address < ADDR_FLASH_SECTOR_6) && (Address >= ADDR_FLASH_SECTOR_5))
-	{
-		sector = FLASH_SECTOR_5;
-	}
-	else if((Address < ADDR_FLASH_SECTOR_7) && (Address >= ADDR_FLASH_SECTOR_6))
-	{
-		sector = FLASH_SECTOR_6;
-	}
-	else
-	{
-		sector = FLASH_SECTOR_7;
-	}
+  if ((Address < ADDR_FLASH_SECTOR_1) && (Address >= ADDR_FLASH_SECTOR_0))
+  {
+    sector = FLASH_SECTOR_0;
+  }
+  else if ((Address < ADDR_FLASH_SECTOR_2) && (Address >= ADDR_FLASH_SECTOR_1))
+  {
+    sector = FLASH_SECTOR_1;
+  }
+  else if ((Address < ADDR_FLASH_SECTOR_3) && (Address >= ADDR_FLASH_SECTOR_2))
+  {
+    sector = FLASH_SECTOR_2;
+  }
+  else if ((Address < ADDR_FLASH_SECTOR_4) && (Address >= ADDR_FLASH_SECTOR_3))
+  {
+    sector = FLASH_SECTOR_3;
+  }
+  else if ((Address < ADDR_FLASH_SECTOR_5) && (Address >= ADDR_FLASH_SECTOR_4))
+  {
+    sector = FLASH_SECTOR_4;
+  }
+  else if ((Address < ADDR_FLASH_SECTOR_6) && (Address >= ADDR_FLASH_SECTOR_5))
+  {
+    sector = FLASH_SECTOR_5;
+  }
+  else if ((Address < ADDR_FLASH_SECTOR_7) && (Address >= ADDR_FLASH_SECTOR_6))
+  {
+    sector = FLASH_SECTOR_6;
+  }
+  else
+  {
+    sector = FLASH_SECTOR_7;
+  }
 
-	return sector;
+  return sector;
 }
 
 uint16_t usReadRes;
