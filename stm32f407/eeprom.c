@@ -67,6 +67,10 @@ static uint16_t EE_FindValidPage(uint8_t Operation);
 static uint16_t EE_VerifyPageFullWriteVariable(uint16_t VirtAddress, uint16_t Data);
 static uint16_t EE_PageTransfer(uint16_t VirtAddress, uint16_t Data);
 static uint16_t EE_VerifyPageFullyErased(uint32_t Address);
+static uint32_t GetSector(uint32_t Address);
+
+#define PAGE0_ID GetSector(PAGE0_BASE_ADDRESS)
+#define PAGE1_ID GetSector(PAGE1_BASE_ADDRESS)
 
 /**
   * @brief  Restore the pages to a known good state in case of page's status
@@ -749,6 +753,47 @@ static uint16_t EE_PageTransfer(uint16_t VirtAddress, uint16_t Data)
 
   /* Return last operation flash status */
   return FlashStatus;
+}
+
+/* Get sector number by address */
+static uint32_t GetSector(uint32_t Address)
+{
+	uint32_t sector = 0;
+
+	if((Address < ADDR_FLASH_SECTOR_1) && (Address >= ADDR_FLASH_SECTOR_0))
+	{
+		sector = FLASH_SECTOR_0;
+	}
+	else if((Address < ADDR_FLASH_SECTOR_2) && (Address >= ADDR_FLASH_SECTOR_1))
+	{
+		sector = FLASH_SECTOR_1;
+	}
+	else if((Address < ADDR_FLASH_SECTOR_3) && (Address >= ADDR_FLASH_SECTOR_2))
+	{
+		sector = FLASH_SECTOR_2;
+	}
+	else if((Address < ADDR_FLASH_SECTOR_4) && (Address >= ADDR_FLASH_SECTOR_3))
+	{
+		sector = FLASH_SECTOR_3;
+	}
+	else if((Address < ADDR_FLASH_SECTOR_5) && (Address >= ADDR_FLASH_SECTOR_4))
+	{
+		sector = FLASH_SECTOR_4;
+	}
+	else if((Address < ADDR_FLASH_SECTOR_6) && (Address >= ADDR_FLASH_SECTOR_5))
+	{
+		sector = FLASH_SECTOR_5;
+	}
+	else if((Address < ADDR_FLASH_SECTOR_7) && (Address >= ADDR_FLASH_SECTOR_6))
+	{
+		sector = FLASH_SECTOR_6;
+	}
+	else
+	{
+		sector = FLASH_SECTOR_7;
+	}
+
+	return sector;
 }
 
 uint16_t usReadRes;
